@@ -16,7 +16,7 @@ import asyncio
 HUME_API_KEY = "xXQA3btAKN3pAcTkq0etLlqEcTns4jcZWNCJPMFdQ2AXS1oQ"
 SPOTIFY_CLIENT_ID = "bcf78faf174e4bcabcce73773e1f650f"
 SPOTIFY_CLIENT_SECRET = "93c3a69720d24a55ad13d22c6058ae5e"
-SPOTIFY_REDIRECT_URI = "https://64f8-155-33-134-45.ngrok-free.app/callback"
+SPOTIFY_REDIRECT_URI = "http://localhost:8080/callback"
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 
@@ -190,18 +190,19 @@ def mood_to_music_features(mood):
 
     return mood_map.get(mood, {"valence": 0.5, "energy": 0.5, "danceability": 0.5, "acousticness": 0.8, "tempo": 100})
 
-def find_closest_song(valence, energy, danceability, tempo):
+def find_closest_song(valence, energy, danceability, acousticness, tempo):
     filtered_df = df[~df["decade"].isin(["60s", "70s"])].copy()
     filtered_df["score"] = (
         abs(filtered_df["valence"] - valence) +
         abs(filtered_df["energy"] - energy) +
+        abs(filtered_df["acousticness"] - acousticness) +
         abs(filtered_df["danceability"] - danceability) +
         abs(filtered_df["tempo"] - tempo) / 200
     )
     top_candidates = filtered_df.nsmallest(20, "score")
     if not top_candidates.empty:
         selected_song = top_candidates.sample(n=1, weights=top_candidates["popularity"]).iloc[0]
-        track_uri = str(selected_song["uri"]).split(":")[-1]  # Extract track ID from URI
+        track_uri = str(selected_song["uri"]).split(":")[-1]  
         return {
             "track_id": track_uri,
             "track_name": str(selected_song["track"]),
