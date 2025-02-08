@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Emotion to Spotify</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        button { font-size: 18px; padding: 10px 20px; margin: 10px; cursor: pointer; }
+        #status { font-weight: bold; margin-top: 20px; }
+        #result { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Voice Emotion to Spotify</h1>
+
+    <!-- Spotify Login/Logout Button -->
+    {% if logged_in %}
+        <button id="spotifyLogout">Logout</button>
+    {% else %}
+        <button id="spotifyLogin">Login with Spotify</button>
+    {% endif %}
+
+    <br><br>
+
+    <!-- Recording Buttons -->
+    <button id="recordBtn">Start Recording</button>
+    <button id="stopBtn" style="display:none;">Stop Recording</button>
+    
+    <p id="status">Press "Start Recording" and speak...</p>
+    
+    <div id="result"></div>
+
+    <script>
+        let isRecording = false;
+
+        // Handle Spotify Login
+        document.getElementById("spotifyLogin")?.addEventListener("click", () => {
+            window.location.href = "/login";
+        });
+
+        // Handle Spotify Logout
+        document.getElementById("spotifyLogout")?.addEventListener("click", () => {
+            window.location.href = "/logout";
+        });
+
+        // Handle Start Recording
+        document.getElementById("recordBtn").addEventListener("click", async () => {
+            if (isRecording) return;
+
+            isRecording = true;
+            document.getElementById("recordBtn").style.display = "none";
+            document.getElementById("stopBtn").style.display = "inline-block";
+            document.getElementById("status").textContent = "Recording... Speak now!";
+
+            fetch("/start_recording", { method: "POST" })
+                .then(response => response.json())
+                .then(data => console.log(data))
+                .catch(err => console.error("Error starting recording:", err));
+        });
+
+        // Handle Stop Recording
+        document.getElementById("stopBtn").addEventListener("click", async () => {
+            if (!isRecording) return;
+
+            isRecording = false;
+            document.getElementById("recordBtn").style.display = "inline-block";
+            document.getElementById("stopBtn").style.display = "none";
+            document.getElementById("status").textContent = "Processing...";
+
+            fetch("/stop_recording", { method: "POST" })
+                .then(response => response.json())
+                .then(() => fetch("/process_audio", { method: "POST" }))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById("result").innerHTML = `<p style="color: red;">⚠️ ${data.error}</p>`;
+                    } else {
+                        document.getElementById("result").innerHTML = `
+                            <h3>🎭 Detected Emotion: ${data.emotion}</h3>
+                            <h4>🎵 Song Recommendation:</h4>
+                            <p><strong>${data.matched_song.track_name}</strong> by ${data.matched_song.artist}</p>
+                            <p>🔗 <a href="https://open.spotify.com/track/${data.matched_song.track_id}" target="_blank">Play on Spotify</a></p>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    document.getElementById("result").innerHTML = `<p style="color: red;">⚠️ Error processing audio.</p>`;
+                });
+
+            document.getElementById("status").textContent = "Done!";
+        });
+
+    </script>
+
+</body>
+</html>
