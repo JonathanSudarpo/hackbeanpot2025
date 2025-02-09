@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "react-qr-code": "^2.0.15"
+    "react-qr-code": "^2.0.15",
+    "spotify": "^0.3.0"
   }
 }
