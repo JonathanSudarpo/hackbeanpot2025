@@ -14,6 +14,7 @@ from hume.expression_measurement.stream.socket_client import StreamConnectOption
 import asyncio
 import time
 import random
+from flask_cors import CORS
 
 # Your API keys and credentials
 HUME_API_KEY = "xXQA3btAKN3pAcTkq0etLlqEcTns4jcZWNCJPMFdQ2AXS1oQ"
@@ -26,6 +27,7 @@ SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+CORS(app)
 
 df = pd.read_csv("spotify_dataset.csv")
 
@@ -233,6 +235,112 @@ def process_audio_route():
                 print(f"Could not delete {file_path}: {e}")
             return jsonify({"emotion": strongest_emotion, "matched_song": closest_song}), 200
     return jsonify({"error": "No emotion detected"}), 500
+
+from pymongo import MongoClient
+from bson import ObjectId
+from flask import Flask, request, jsonify, redirect, render_template, copy_current_request_context
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.neighbors import NearestNeighbors
+import math
+
+# --- MongoDB Connection ---
+MONGO_URI = "mongodb+srv://dolientrang03:Dolientrang2003!@hackbeanpot.aemmt.mongodb.net/?retryWrites=true&w=majority&appName=Hackbeanpot"
+DB_NAME = "test"              # Your database name.
+COLLECTION_NAME = "users"       # Your collection name.
+
+# Create a MongoClient and define the users_collection.
+client = MongoClient(MONGO_URI)
+db = client[DB_NAME]
+users_collection = db[COLLECTION_NAME]
+print("Connected to users collection:", users_collection)
+# --- Friend Recommendations Route using kNN ---
+@app.route('/friends', methods=['GET'])
+def friends_route():
+    try:
+        # Get the target userId from query parameters.
+        userId = request.args.get("userId")
+        if not userId:
+            return jsonify({"error": "userId query parameter required"}), 400
+
+        # Fetch all users from MongoDB.
+        users_data = list(users_collection.find())
+        if not users_data:
+            return jsonify({"error": "No users found in database"}), 404
+
+        # Convert data to DataFrame.
+        users_df = pd.DataFrame(users_data)
+        users_df['_id'] = users_df['_id'].astype(str)
+
+        # Extract the first 3 interests for each user.
+        num_interests = 3
+        for i in range(num_interests):
+            col_name = f"interest{i+1}"
+            users_df[col_name] = users_df["interests"].apply(
+                lambda interests: interests[i] if interests and len(interests) > i else None
+            )
+
+        # Define categorical features.
+        categorical_features = ['location'] + [f"interest{i+1}" for i in range(num_interests)]
+        categorical_transformer = OneHotEncoder(handle_unknown="ignore")
+        preprocessor = ColumnTransformer(
+            transformers=[("cat", categorical_transformer, categorical_features)],
+            remainder="drop"
+        )
+
+        # Build a preprocessing pipeline.
+        preprocessing_pipeline = Pipeline(steps=[
+            ("preprocessor", preprocessor),
+            ("scaler", StandardScaler(with_mean=False))
+        ])
+
+        # Fit and transform the DataFrame.
+        transformed_features = preprocessing_pipeline.fit_transform(users_df)
+
+        # Now, fit a NearestNeighbors model on the transformed features.
+        knn_model = NearestNeighbors(n_neighbors=len(users_df), metric="euclidean")
+        knn_model.fit(transformed_features)
+        distances, indices = knn_model.kneighbors(transformed_features, return_distance=True)
+
+        # Find the target user's index.
+        target_indices = users_df.index[users_df['_id'] == userId].tolist()
+        if not target_indices:
+            return jsonify({"error": "Target user not found"}), 404
+        target_index = target_indices[0]
+
+        # Get neighbor indices and distances for the target user.
+        neighbor_indices = indices[target_index]
+        neighbor_distances = distances[target_index]
+
+        recommendations = []
+        for idx, dist in zip(neighbor_indices, neighbor_distances):
+            # Skip self.
+            if idx == target_index:
+                continue
+            similarity = 1 / (1 + dist)  # Convert Euclidean distance to similarity.
+            rec_user = users_df.iloc[idx].to_dict()
+            rec_user['_id'] = rec_user['_id']  # already a string
+            rec_user['similarity'] = similarity
+            recommendations.append(rec_user)
+
+        recommendations.sort(key=lambda x: x['similarity'], reverse=True)
+
+        # Remove problematic fields (like __v with NaN).
+        for rec in recommendations:
+            rec.pop("password", None)
+            # If __v exists and is NaN, remove it.
+            if "__v" in rec and isinstance(rec["__v"], float) and math.isnan(rec["__v"]):
+                rec.pop("__v", None)
+
+        print("Returning recommended friends for user", userId)
+        print("recommendations: ", recommendations)
+        return jsonify({"recommendedFriends": recommendations}), 200
+        
+
+    except Exception as e:
+        print("Error in /friends route:", e)
+        return jsonify({"error": "Internal Server Error"}), 500
 
 if __name__ == "__main__":
     os.makedirs("uploads", exist_ok=True)
