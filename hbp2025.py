@@ -15,7 +15,7 @@ import asyncio
 import time
 import random  # For random song selection
 
-from pairing_model import get_pairings
+# from pairing_model import get_pairings
 
 
 # Your API keys and credentials
