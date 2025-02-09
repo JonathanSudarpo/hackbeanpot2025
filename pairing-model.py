@@ -12,6 +12,7 @@ import random
 client = MongoClient('mongodb+srv://dolientrang03:<db_password>@hackbeanpot.aemmt.mongodb.net/?retryWrites=true&w=majority&appName=Hackbeanpot')
 db = client['test']
 users_collection = db['users']
+print(users_collection)
 
 # Fetch data from MongoDB
 users_cursor = users_collection.find()
