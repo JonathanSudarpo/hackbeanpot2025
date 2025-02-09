@@ -13,6 +13,8 @@ from hume.expression_measurement.stream import Config
 from hume.expression_measurement.stream.socket_client import StreamConnectOptions
 import asyncio
 
+from pairing_model import get_pairings
+
 HUME_API_KEY = "xXQA3btAKN3pAcTkq0etLlqEcTns4jcZWNCJPMFdQ2AXS1oQ"
 SPOTIFY_CLIENT_ID = "bcf78faf174e4bcabcce73773e1f650f"
 SPOTIFY_CLIENT_SECRET = "93c3a69720d24a55ad13d22c6058ae5e"
@@ -230,6 +232,33 @@ def process_audio():
             queue_song(closest_song["track_id"])
             return jsonify({"emotion": strongest_emotion, "matched_song": closest_song}), 200
     return jsonify({"error": "No emotion detected"}), 500
+
+
+#-------------------------- Friends Matching Model ---------------------------------------------
+
+
+app = Flask(__name__)
+
+@app.route('/', methods=['GET'])
+def default():
+    return "Hello World!"
+
+@app.route('/matchPairs', methods=['GET'])
+def get_match_pairs():
+    return pair_results
+
+@app.route('/matchPairs', methods=['POST'])
+def add_match_pair():
+    global pair_results  # Declare pair_results as global
+    pairings = get_pairings()
+    pairs_jsonify = jsonify(pairings)
+    pair_results = pairs_jsonify
+    return pair_results
+
+# if __name__ == '__main__':
+#     app.run(host='localhost', port = 5002, debug=True)
+
+
 
 if __name__ == "__main__":
     os.makedirs("uploads", exist_ok=True)
