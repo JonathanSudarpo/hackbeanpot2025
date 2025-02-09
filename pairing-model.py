@@ -43,7 +43,7 @@ preprocessor = ColumnTransformer(
 pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor),
     ('scaler', StandardScaler(with_mean=False)),
-    ('knn', NearestNeighbors(n_neighbors=6, metric='euclidean'))
+    ('knn', NearestNeighbors(n_neighbors=3, metric='euclidean'))
 ])
 
 # Fit the pipeline to the user data
