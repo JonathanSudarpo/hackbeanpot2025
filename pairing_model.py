@@ -9,7 +9,7 @@ from collections import defaultdict
 import numpy as np
 
 # Connect to MongoDB
-client = MongoClient('mongodb+srv://dolientrang03:Dolientrang2003!@hackbeanpot.aemmt.mongodb.net/?retryWrites=true&w=majority&appName=Hackbeanpot')
+client = MongoClient('mongodb+srv://@hackbeanpot.aemmt.mongodb.net/?retryWrites=true&w=majority&appName=Hackbeanpot')
 db = client['test']
 users_collection = db['users']
 

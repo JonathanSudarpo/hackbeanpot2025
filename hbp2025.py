@@ -246,7 +246,7 @@ from sklearn.neighbors import NearestNeighbors
 import math
 
 # --- MongoDB Connection ---
-MONGO_URI = "mongodb+srv://dolientrang03:Dolientrang2003!@hackbeanpot.aemmt.mongodb.net/?retryWrites=true&w=majority&appName=Hackbeanpot"
+MONGO_URI = "mongodb+srv://@hackbeanpot.aemmt.mongodb.net/?retryWrites=true&w=majority&appName=Hackbeanpot"
 DB_NAME = "test"              # Your database name.
 COLLECTION_NAME = "users"       # Your collection name.
 
